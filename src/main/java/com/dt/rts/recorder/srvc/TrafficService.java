@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -33,18 +32,36 @@ public class TrafficService {
 	}
 	
 	public void populateRelativeUrl(eRegHttpTraffic traffic) {
+		String actualURL = traffic.getUrl();
+		String relativeUrl = identifyRelativeUrl(actualURL);
+		traffic.setRequesturi(relativeUrl);
+	}
+	
+	public String identifyRelativeUrl(String url) {
 		try {
-			URL aURL = new URL(traffic.getUrl());
-			traffic.setRequesturi(aURL.getPath());
+			URL aURL = new URL(url);
+			//lets say URL is http://localhost:8080/cpa/client/clientInfo?param=value
+	    	//getUrl() returns '/cpa/client/clientInfo'
+			//But I want queryParams as well.
+			String relativeUrl = aURL.getPath();
+			relativeUrl = url.substring(url.indexOf(relativeUrl));
+			return relativeUrl; 
 		}
 		catch(Exception e) {
-			
+			return url;
 		}
 	}
 	
 	public void virtualize(HttpServletRequest httpRequest, HttpServletResponse httpResponse)  throws IOException, ServletException {
-		logger.info("Querying DB to check getRequestURI=" + httpRequest.getRequestURI() + ", Method=" + httpRequest.getMethod() + " exists.");
-		List<eRegHttpTraffic> list = trafficRepository.findByRequesturiAndMethod(httpRequest.getRequestURI(), httpRequest.getMethod());
+		//String relativeUrl = identifyRelativeUrl(httpRequest.getRequestURL().toString());
+		String relativeUrl = httpRequest.getRequestURI().toString();
+		String queryParam = httpRequest.getQueryString();
+		if(queryParam != null && queryParam.length() > 0) {
+			relativeUrl = relativeUrl + "?" + queryParam;
+		}
+		logger.info("Querying DB to check getRequestURI=" + relativeUrl + ", Method=" + httpRequest.getMethod() + " exists.");
+		
+		List<eRegHttpTraffic> list = trafficRepository.findByRequesturiAndMethod(relativeUrl, httpRequest.getMethod());
 		PrintWriter out = httpResponse.getWriter();
 		String contentType = "application/json";
 		if(list != null && list.size() > 0) {
@@ -60,6 +77,7 @@ public class TrafficService {
 						KeyValue keyValue = capturedResponseHeaders.get(i);
 						httpResponse.setHeader(keyValue.getName(), keyValue.getValue());
 					}
+					logger.info("Content=" + capturedResponse.getContent());
 					out.println(capturedResponse.getContent());
 					/*
 					KeyValue contentTypeKeyValue = capturedResponseHeaders.stream().filter(item -> "content-type".equalsIgnoreCase(item.getName())).findFirst().orElse(null);
@@ -77,9 +95,16 @@ public class TrafficService {
 		} else {
 			logger.info("There are NO virtual matching responses. Returning generic response");
 			httpResponse.setContentType(contentType);
-			httpResponse.setStatus(HttpServletResponse.SC_OK);
+			httpResponse.setStatus(HttpServletResponse.SC_NOT_FOUND);
 			out.println("{\"name\":\"Greetings from TrafficFilter Virtual service.!\"}");
 		}
 	}
-	
+	/**
+	public static void main(String[] args) {
+		TrafficService obj = new TrafficService();
+		eRegHttpTraffic traffic = new eRegHttpTraffic();
+		traffic.setUrl("http://localhost:8080/cpa/client/clientInfo?param=value");
+		obj.populateRelativeUrl(traffic);
+		System.out.println(traffic.getRequesturi());
+	}*/
 }

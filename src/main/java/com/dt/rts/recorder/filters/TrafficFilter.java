@@ -47,7 +47,7 @@ public class TrafficFilter  implements Filter {
     		logger.info("httpServletRequest.getContextPath()=" + httpServletRequest.getContextPath());
     		//lets say URL is http://localhost:8080/cpa/client/clientInfo?param=value
     		//getRequestURI() returns '/cpa/client/clientInfo'
-    		logger.info("httpServletRequest.getRequestURI()=" + httpServletRequest.getRequestURI()); 			
+    		logger.info("httpServletRequest.getRequestURL()=" + httpServletRequest.getRequestURL());
     		//httpServletResponse.reset();
     		//httpServletResponse.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY);
     		//httpServletResponse.setHeader("Location", url);
